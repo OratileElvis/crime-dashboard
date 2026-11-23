@@ -1,0 +1,45 @@
+category,level,parent_category,crime_group,counts_in_total,in_prior_schema
+17 Community reported serious crime,headline_total,,,False,True
+Contact crime (Crimes against the person),group_total,17 Community reported serious crime,,False,True
+Contact-related crime,group_total,17 Community reported serious crime,,False,True
+Property-related crime,group_total,17 Community reported serious crime,,False,True
+Other serious crime,group_total,17 Community reported serious crime,,False,True
+Crime detected as a result of police action,group_total,,,False,True
+Sexual offences,subtotal,Contact crime (Crimes against the person),,False,True
+TRIO Crime,subtotal,Robbery with aggravating circumstances,,False,True
+Murder,crime,Contact crime (Crimes against the person),Contact crime,True,True
+Attempted murder,crime,Contact crime (Crimes against the person),Contact crime,True,True
+Assault with the intent to inflict grievous bodily harm,crime,Contact crime (Crimes against the person),Contact crime,True,True
+Common assault,crime,Contact crime (Crimes against the person),Contact crime,True,True
+Common robbery,crime,Contact crime (Crimes against the person),Contact crime,True,True
+Robbery with aggravating circumstances,crime,Contact crime (Crimes against the person),Contact crime,True,True
+Rape,crime,Sexual offences,Contact crime,True,True
+Sexual assault,crime,Sexual offences,Contact crime,True,True
+Attempted sexual offences,crime,Sexual offences,Contact crime,True,True
+Contact sexual offences,crime,Sexual offences,Contact crime,True,True
+Arson,crime,Contact-related crime,Contact-related crime,True,True
+Malicious damage to property,crime,Contact-related crime,Contact-related crime,True,True
+Burglary at non-residential premises,crime,Property-related crime,Property-related crime,True,True
+Burglary at residential premises,crime,Property-related crime,Property-related crime,True,True
+Theft of motor vehicle and motorcycle,crime,Property-related crime,Property-related crime,True,True
+Theft out of or from motor vehicle,crime,Property-related crime,Property-related crime,True,True
+Stock-theft,crime,Property-related crime,Property-related crime,True,True
+All theft not mentioned elsewhere,crime,Other serious crime,Other serious crime,True,True
+Commercial crime,crime,Other serious crime,Other serious crime,True,True
+Shoplifting,crime,Other serious crime,Other serious crime,True,True
+Illegal possession of firearms and ammunition,crime,Crime detected as a result of police action,Detected by police action,True,True
+Drug-related crime,crime,Crime detected as a result of police action,Detected by police action,True,True
+Driving under the influence of alcohol or drugs,crime,Crime detected as a result of police action,Detected by police action,True,True
+Sexual offences detected as a result of police action,crime,Crime detected as a result of police action,Detected by police action,True,True
+Kidnapping,crime,,Kidnapping (standalone),True,True
+Carjacking,breakdown,TRIO Crime,Contact crime,False,True
+Robbery at residential premises,breakdown,TRIO Crime,Contact crime,False,True
+Robbery at non-residential premises,breakdown,TRIO Crime,Contact crime,False,True
+Robbery of cash in transit,breakdown,Robbery with aggravating circumstances,Contact crime,False,True
+Bank robbery,breakdown,Robbery with aggravating circumstances,Contact crime,False,True
+Truck hijacking,breakdown,Robbery with aggravating circumstances,Contact crime,False,True
+Culpable homicide,crime_other,,Other (outside headline groups),False,False
+Public violence,crime_other,,Other (outside headline groups),False,False
+Crimen injuria,crime_other,,Other (outside headline groups),False,False
+Neglect and ill-treatment of children,crime_other,,Other (outside headline groups),False,False
+Abduction,crime_other,,Other (outside headline groups),False,False

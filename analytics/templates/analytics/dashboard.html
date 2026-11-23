@@ -1,0 +1,424 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>South Africa Crime Dashboard</title>
+    <style>
+        :root {
+            --bg: #f4f5f7;
+            --card: #ffffff;
+            --text: #1f2933;
+            --muted: #61707f;
+            --line: #d9dee4;
+            --accent: #2f5f98;
+            --accent-2: #b4470f;
+            --error-bg: #fdecea;
+            --error-text: #8a1c14;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+        main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+        h1 { margin: 0; font-size: 1.7rem; }
+        h2 { margin: 0; font-size: 1.15rem; }
+        .subtitle { margin: 4px 0 20px; color: var(--muted); }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 12px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .field label { display: block; font-size: .8rem; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+        .field select {
+            width: 100%;
+            padding: 8px 10px;
+            font: inherit;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--text);
+        }
+
+        .status { min-height: 1.5rem; margin: 10px 0 0; font-size: .9rem; color: var(--muted); }
+        .status.error { background: var(--error-bg); color: var(--error-text); padding: 8px 12px; border-radius: 8px; }
+
+        .section-head { display: flex; align-items: center; gap: 10px; margin: 20px 0 10px; }
+        .info-btn {
+            width: 24px; height: 24px; border-radius: 50%;
+            border: none; background: #4a5662; color: #fff;
+            font-weight: 700; cursor: pointer;
+        }
+        .info-btn:hover, .info-btn:focus-visible { background: #1f2933; }
+        .info-box {
+            background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+            padding: 14px 18px; margin-bottom: 14px; font-size: .92rem;
+        }
+        .info-box p { margin: 0 0 8px; }
+        .info-box p:last-child { margin-bottom: 0; }
+
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; transition: opacity .15s; }
+        .cards.loading { opacity: .55; }
+        .card {
+            background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+            padding: 16px; display: flex; flex-direction: column; gap: 4px;
+        }
+        .card .label { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+        .card .value { font-size: 1.6rem; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+        .card .value.text { font-size: 1.15rem; }
+        .card .sub { font-size: .82rem; color: var(--muted); }
+
+        .panel {
+            background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+            padding: 18px; margin-top: 18px;
+        }
+        .hint { margin: 4px 0 12px; font-size: .85rem; color: var(--muted); }
+        .chart-box { position: relative; width: 100%; height: 320px; }
+        .chart-box.short { height: 300px; }
+
+        footer { margin-top: 24px; font-size: .8rem; color: var(--muted); }
+    </style>
+</head>
+<body>
+<main>
+    <header>
+        <h1>South Africa Crime Dashboard</h1>
+        <p class="subtitle">Police-recorded crime statistics by province and quarter (SAPS)</p>
+    </header>
+
+    <section class="filters" aria-label="Filters">
+        <div class="field">
+            <label for="period">Period</label>
+            <select id="period"></select>
+        </div>
+        <div class="field">
+            <label for="province">Province</label>
+            <select id="province"><option value="">All provinces</option></select>
+        </div>
+        <div class="field">
+            <label for="scope">Crimes included</label>
+            <select id="scope">
+                <option value="community">Community-reported serious crime (SAPS headline)</option>
+                <option value="all">All recorded crime (adds police-detected crime and kidnapping)</option>
+            </select>
+        </div>
+    </section>
+
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+
+    <div class="section-head">
+        <h2>Crime insights</h2>
+        <button type="button" id="infoToggle" class="info-btn" aria-expanded="false"
+                aria-controls="infoBox" aria-label="About these figures">?</button>
+    </div>
+
+    <div id="infoBox" class="info-box" hidden>
+        <p><strong>No double counting.</strong> SAPS publishes individual crimes <em>and</em> subtotals
+           (for example "Contact crime" is the sum of murder, rape and others). Only individual crimes are added up here.</p>
+        <p><strong>Crimes included.</strong> "Community-reported serious crime" is SAPS's headline measure.
+           "All recorded crime" also adds crimes detected by police action (such as drug offences, which rise when
+           police search more) and kidnapping.</p>
+        <p><strong>Change</strong> compares the same quarter one year earlier, because crime is seasonal.
+           <strong>Murder rate</strong> uses SAPS's population estimates (April&ndash;June); for other quarters it is approximate.</p>
+    </div>
+
+    <div id="cards" class="cards" aria-busy="true">
+        <div class="card">
+            <span class="label">Total incidents</span>
+            <span class="value" id="insight-total">…</span>
+            <span class="sub" id="insight-showing"></span>
+        </div>
+        <div class="card">
+            <span class="label">Most common crime</span>
+            <span class="value text" id="insight-category">…</span>
+            <span class="sub">Highest count in this selection</span>
+        </div>
+        <div class="card">
+            <span class="label">Change on last year</span>
+            <span class="value" id="insight-change">…</span>
+            <span class="sub" id="insight-change-sub"></span>
+        </div>
+        <div class="card">
+            <span class="label">Murder rate</span>
+            <span class="value" id="insight-rate">…</span>
+            <span class="sub" id="insight-rate-sub"></span>
+        </div>
+    </div>
+
+    <section class="panel">
+        <h2>Incidents by crime type</h2>
+        <p class="hint">Hover a bar for the full name and crime group.</p>
+        <div class="chart-box" id="barBox">
+            <canvas id="summaryChart" role="img" aria-label="Bar chart of incidents by crime type"></canvas>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2 id="trendTitle">Year-on-year trend</h2>
+        <p class="hint" id="trendNote"></p>
+        <div class="chart-box short" id="trendBox">
+            <canvas id="trendChart" role="img" aria-label="Line chart of total incidents by year"></canvas>
+        </div>
+    </section>
+
+    <footer>
+        Source: South African Police Service (SAPS) quarterly crime statistics. Figures are crimes recorded by police;
+        not all crime is reported. Periods follow the SAPS financial year (April&ndash;March).
+    </footer>
+</main>
+
+<script src="{% static 'analytics/chart.umd.js' %}"></script>
+<script>
+    "use strict";
+
+    // Where the data comes from (Django fills these in, so no hard-coded paths)
+    const API = {
+        meta: "{% url 'analytics_api:meta' %}",
+        summary: "{% url 'analytics_api:crime-summary' %}",
+        trends: "{% url 'analytics_api:crime-trends' %}",
+        insights: "{% url 'analytics_api:crime-insights' %}",
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const els = {
+        period: $("period"), province: $("province"), scope: $("scope"),
+        status: $("status"), cards: $("cards"),
+        total: $("insight-total"), showing: $("insight-showing"),
+        category: $("insight-category"),
+        change: $("insight-change"), changeSub: $("insight-change-sub"),
+        rate: $("insight-rate"), rateSub: $("insight-rate-sub"),
+        barBox: $("barBox"), barCanvas: $("summaryChart"),
+        trendBox: $("trendBox"), trendCanvas: $("trendChart"),
+        trendTitle: $("trendTitle"), trendNote: $("trendNote"),
+        infoToggle: $("infoToggle"), infoBox: $("infoBox"),
+    };
+
+    const numberFormat = new Intl.NumberFormat("en-ZA");
+    const charts = { bar: null, trend: null };
+    let currentRequest = null;   // lets us cancel an older request when the filters change
+
+    // ---------- talking to the API ----------
+    async function getJSON(url, params, signal) {
+        const response = await fetch(`${url}?${new URLSearchParams(params)}`, {
+            signal,
+            headers: { Accept: "application/json" },
+        });
+        if (!response.ok) {
+            let detail = "";
+            try { detail = (await response.json()).detail || ""; } catch (e) { /* not JSON */ }
+            throw new Error(detail || `The server returned an error (${response.status}).`);
+        }
+        return response.json();
+    }
+
+    function currentParams() {
+        const params = { scope: els.scope.value };
+        if (els.period.value) params.period = els.period.value;
+        if (els.province.value) params.province = els.province.value;
+        return params;
+    }
+
+    // ---------- status line ----------
+    function setStatus(message, isError) {
+        els.status.textContent = message;
+        els.status.classList.toggle("error", Boolean(isError));
+    }
+
+    // ---------- drawing ----------
+    function renderInsights(data) {
+        els.total.textContent = numberFormat.format(data.total_incidents);
+        els.showing.textContent = `${data.period} · ${data.province}`;
+        els.category.textContent = data.top_category || "No data";
+
+        if (data.change_pct === null) {
+            els.change.textContent = "—";
+            els.changeSub.textContent = "No same-quarter comparison available";
+        } else {
+            const pct = data.change_pct;
+            const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "▬";
+            const word = pct > 0 ? "higher than" : pct < 0 ? "lower than" : "unchanged from";
+            els.change.textContent = `${arrow} ${Math.abs(pct).toFixed(1)}%`;
+            els.changeSub.textContent = `${word} ${data.compared_to}`;
+        }
+
+        if (data.murder_rate_per_100k === null) {
+            els.rate.textContent = "—";
+            els.rateSub.textContent = "No population data";
+        } else {
+            els.rate.textContent = data.murder_rate_per_100k.toFixed(1);
+            els.rateSub.textContent = data.rate_is_approximate
+                ? "per 100,000 people (approximate for this quarter)"
+                : "per 100,000 people";
+        }
+    }
+
+    function shorten(text, max) {
+        return text.length > max ? text.slice(0, max - 1) + "…" : text;
+    }
+
+    function renderBarChart(rows) {
+        if (charts.bar) charts.bar.destroy();
+        els.barBox.style.height = Math.max(260, rows.length * 30 + 70) + "px";
+
+        charts.bar = new Chart(els.barCanvas.getContext("2d"), {
+            type: "bar",
+            data: {
+                labels: rows.map((r) => r.category),
+                datasets: [{
+                    label: "Incidents",
+                    data: rows.map((r) => r.incidents),
+                    backgroundColor: "rgba(47, 95, 152, 0.8)",
+                    borderColor: "rgba(47, 95, 152, 1)",
+                    borderWidth: 1,
+                }],
+            },
+            options: {
+                indexAxis: "y",
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => items[0].label,
+                            label: (ctx) => `${numberFormat.format(ctx.parsed.x)} incidents`,
+                            afterLabel: (ctx) => rows[ctx.dataIndex].group,
+                        },
+                    },
+                },
+                scales: {
+                    x: { beginAtZero: true, ticks: { callback: (v) => numberFormat.format(v) } },
+                    y: {
+                        ticks: {
+                            callback: function (value) { return shorten(this.getLabelForValue(value), 38); },
+                        },
+                    },
+                },
+            },
+        });
+
+        const top = rows[0];
+        els.barCanvas.setAttribute("aria-label", top
+            ? `Bar chart of incidents by crime type. Highest: ${top.category}, ${numberFormat.format(top.incidents)}.`
+            : "Bar chart of incidents by crime type. No data.");
+    }
+
+    function renderTrend(data) {
+        if (charts.trend) { charts.trend.destroy(); charts.trend = null; }
+        els.trendTitle.textContent = `Year-on-year trend: ${data.season}`;
+
+        if (data.points.length < 2) {
+            els.trendBox.hidden = true;
+            els.trendNote.textContent =
+                `Only one ${data.season} period is loaded, so a year-on-year trend cannot be drawn yet.`;
+            return;
+        }
+
+        els.trendBox.hidden = false;
+        els.trendNote.textContent =
+            `The same quarter (${data.season}) in each year, so seasonal swings do not distort the comparison.`;
+
+        charts.trend = new Chart(els.trendCanvas.getContext("2d"), {
+            type: "line",
+            data: {
+                labels: data.points.map((p) => p.label),
+                datasets: [{
+                    label: "Total incidents",
+                    data: data.points.map((p) => p.total),
+                    borderColor: "#b4470f",
+                    backgroundColor: "rgba(180, 71, 15, 0.08)",
+                    borderWidth: 2,
+                    pointRadius: 5,
+                    fill: true,
+                    tension: 0.25,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (ctx) => `${numberFormat.format(ctx.parsed.y)} incidents` } },
+                },
+                scales: { y: { beginAtZero: true, ticks: { callback: (v) => numberFormat.format(v) } } },
+            },
+        });
+
+        const first = data.points[0], last = data.points[data.points.length - 1];
+        els.trendCanvas.setAttribute("aria-label",
+            `Line chart of total incidents for ${data.season}, from ${numberFormat.format(first.total)} in ${first.label} ` +
+            `to ${numberFormat.format(last.total)} in ${last.label}.`);
+    }
+
+    // ---------- loading everything for the current filters ----------
+    async function loadAll() {
+        if (currentRequest) currentRequest.abort();          // forget the older request
+        currentRequest = new AbortController();
+        const { signal } = currentRequest;
+        const params = currentParams();
+
+        els.cards.classList.add("loading");
+        els.cards.setAttribute("aria-busy", "true");
+        setStatus("Loading…", false);
+
+        try {
+            const [insights, summary, trends] = await Promise.all([
+                getJSON(API.insights, params, signal),
+                getJSON(API.summary, params, signal),
+                getJSON(API.trends, params, signal),
+            ]);
+            if (signal.aborted) return;                        // a newer choice has replaced this one
+            renderInsights(insights);
+            renderBarChart(summary);
+            renderTrend(trends);
+            setStatus("", false);
+        } catch (error) {
+            if (error.name === "AbortError") return;          // a newer request replaced this one
+            setStatus(`Could not load data: ${error.message}`, true);
+        } finally {
+            if (!signal.aborted) {
+                els.cards.classList.remove("loading");
+                els.cards.setAttribute("aria-busy", "false");
+            }
+        }
+    }
+
+    // ---------- start-up ----------
+    function fillSelect(select, items, makeOption) {
+        items.forEach((item) => select.appendChild(makeOption(item)));
+    }
+
+    async function init() {
+        try {
+            const meta = await getJSON(API.meta, {});
+            fillSelect(els.province, meta.provinces, (name) => new Option(name, name));
+            // newest period first in the list
+            fillSelect(els.period, [...meta.periods].reverse(), (p) => new Option(p.label, p.id));
+            if (meta.latest_period_id !== null) els.period.value = String(meta.latest_period_id);
+        } catch (error) {
+            setStatus(`Could not load filters: ${error.message}`, true);
+            return;
+        }
+
+        ["period", "province", "scope"].forEach((id) => els[id].addEventListener("change", loadAll));
+        els.infoToggle.addEventListener("click", () => {
+            els.infoBox.hidden = !els.infoBox.hidden;
+            els.infoToggle.setAttribute("aria-expanded", String(!els.infoBox.hidden));
+        });
+
+        loadAll();
+    }
+
+    init();
+</script>
+</body>
+</html>
